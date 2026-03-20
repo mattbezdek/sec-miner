@@ -1,0 +1,37 @@
+[project]
+name = "sec10k-fetcher"
+version = "0.1.0"
+description = "SEC-miner fetches SEC 10-K filings and exports markdown."
+readme = "README.md"
+authors = [
+    { name = "Matt Bezdek", email = "matt.bezdek@elderresearch.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "edgartools>=4.6.3",
+    "sec2md>=0.1.23",
+    "typer>=0.23.2",
+]
+
+[project.scripts]
+sec-miner = "sec10k_fetcher:main"
+sec-miner-gui = "sec10k_fetcher.app_gui:launch"
+
+[build-system]
+requires = ["uv_build>=0.10.12,<0.11.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.19.1",
+    "pytest>=8.4.2",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.15.7",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
