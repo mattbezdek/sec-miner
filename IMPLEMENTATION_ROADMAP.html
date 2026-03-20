@@ -55,6 +55,44 @@ ul.task-list{list-style: none;}
 </ol>
 <hr>
 </section>
+<section id="implementation-status-updated-mar-20-2026" class="level2">
+<h2 class="anchored" data-anchor-id="implementation-status-updated-mar-20-2026">Implementation Status (Updated Mar 20, 2026)</h2>
+<section id="completed-in-this-iteration" class="level3">
+<h3 class="anchored" data-anchor-id="completed-in-this-iteration">Completed in this iteration</h3>
+<ul>
+<li><strong>Phase 0 (mostly complete):</strong>
+<ul>
+<li>Added domain abstractions <code>FilingRequest</code> and <code>RunOptions</code>.</li>
+<li>Refactored orchestration to consume request/options objects.</li>
+<li>Added architecture documentation in <code>docs/architecture.md</code>.</li>
+<li>Expanded tests across config, fetch filtering, and pipeline cache behavior.</li>
+</ul></li>
+<li><strong>Phase 1 (complete):</strong>
+<ul>
+<li>Added CLI support for <code>--form</code>, <code>--latest-n</code>, <code>--since</code>, <code>--until</code>, and <code>--year</code>.</li>
+<li>Added TOML/config support and validation for the same options.</li>
+<li>Reworked fetch path to select/filter multiple filings deterministically.</li>
+<li>Extended manifest and output metadata to include form/request details.</li>
+</ul></li>
+<li><strong>Phase 2 (complete):</strong>
+<ul>
+<li>Added JSON-backed local cache (<code>cache.py</code>) with schema versioning.</li>
+<li>Implemented resume/skip behavior in pipeline with <code>skipped_cached</code> status.</li>
+<li>Added CLI/config support for <code>--resume</code>, <code>--refresh</code>, and <code>--cache-dir</code>.</li>
+<li>Added cache lifecycle test coverage (first run fetches, second run skips).</li>
+</ul></li>
+</ul>
+</section>
+<section id="deferred-to-later-phases" class="level3">
+<h3 class="anchored" data-anchor-id="deferred-to-later-phases">Deferred to later phases</h3>
+<ul>
+<li>Parallel processing (<code>--max-workers</code>) from Phase 3.</li>
+<li>Section-aware/chunk output modes from Phase 4.</li>
+<li>GUI progress/cancel/preset upgrades from Phase 5.</li>
+</ul>
+<hr>
+</section>
+</section>
 <section id="current-baseline" class="level2">
 <h2 class="anchored" data-anchor-id="current-baseline">Current Baseline</h2>
 <p>SEC-miner currently provides:</p>

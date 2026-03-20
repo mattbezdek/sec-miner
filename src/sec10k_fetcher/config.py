@@ -32,9 +32,16 @@ def load_config(
     since: str | None = None,
     until: str | None = None,
     years: list[int] | None = None,
+    sections: list[str] | None = None,
     resume: bool | None = None,
     refresh: bool | None = None,
     cache_dir: str | None = None,
+    max_workers: int | None = None,
+    output_mode: str | None = None,
+    chunk_size: int | None = None,
+    chunk_overlap: int | None = None,
+    report_format: str | None = None,
+    report_file: str | None = None,
 ) -> AppConfig:
     file_cfg = _load_toml_file(config_path)
     env_identity = os.getenv("SEC_IDENTITY", "")
@@ -49,10 +56,23 @@ def load_config(
     resolved_until = until if until is not None else file_cfg.get("until")
     resolved_years = years if years is not None else list(file_cfg.get("years", []))
     resolved_latest_n = latest_n if latest_n is not None else int(file_cfg.get("latest_n", 1))
+    resolved_sections = [str(item).strip().lower() for item in (sections or file_cfg.get("sections", []))]
 
     resolved_resume = resume if resume is not None else bool(file_cfg.get("resume", True))
     resolved_refresh = refresh if refresh is not None else bool(file_cfg.get("refresh", False))
     resolved_cache_dir = cache_dir or file_cfg.get("cache_dir", ".sec_miner_cache")
+    resolved_max_workers = max_workers if max_workers is not None else int(file_cfg.get("max_workers", 1))
+    resolved_output_mode = (
+        output_mode if output_mode is not None else str(file_cfg.get("output_mode", "markdown_full"))
+    ).strip().lower()
+    resolved_chunk_size = chunk_size if chunk_size is not None else int(file_cfg.get("chunk_size", 1400))
+    resolved_chunk_overlap = (
+        chunk_overlap if chunk_overlap is not None else int(file_cfg.get("chunk_overlap", 200))
+    )
+    resolved_report_format = (
+        report_format if report_format is not None else str(file_cfg.get("report_format", "none"))
+    ).strip().lower()
+    resolved_report_file = report_file if report_file is not None else file_cfg.get("report_file")
 
     config = AppConfig(
         identity=identity or file_cfg.get("identity") or env_identity,
@@ -74,11 +94,18 @@ def load_config(
             since=resolved_since,
             until=resolved_until,
             years=[int(year) for year in resolved_years],
+            sections=resolved_sections,
         ),
         run_options=RunOptions(
             resume=resolved_resume,
             refresh=resolved_refresh,
             cache_dir=Path(resolved_cache_dir),
+            max_workers=resolved_max_workers,
+            output_mode=resolved_output_mode,
+            chunk_size=resolved_chunk_size,
+            chunk_overlap=resolved_chunk_overlap,
+            report_format=resolved_report_format,
+            report_file=str(resolved_report_file) if resolved_report_file else None,
         ),
     )
 
@@ -109,5 +136,19 @@ def load_config(
     if config.run_options.refresh:
         # Refresh mode always bypasses cache reads.
         config.run_options.resume = False
+    if config.run_options.max_workers < 1:
+        raise ValueError("max_workers must be at least 1.")
+    supported_modes = {"markdown_full", "markdown_sections", "jsonl_chunks"}
+    if config.run_options.output_mode not in supported_modes:
+        raise ValueError(f"output_mode must be one of {sorted(supported_modes)}.")
+    if config.run_options.chunk_size < 200:
+        raise ValueError("chunk_size must be at least 200.")
+    if config.run_options.chunk_overlap < 0:
+        raise ValueError("chunk_overlap must be non-negative.")
+    if config.run_options.chunk_overlap >= config.run_options.chunk_size:
+        raise ValueError("chunk_overlap must be smaller than chunk_size.")
+    supported_report_formats = {"none", "markdown", "html"}
+    if config.run_options.report_format not in supported_report_formats:
+        raise ValueError(f"report_format must be one of {sorted(supported_report_formats)}.")
 
     return config

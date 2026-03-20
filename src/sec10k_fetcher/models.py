@@ -26,6 +26,7 @@ class FilingRequest:
     since: str | None = None
     until: str | None = None
     years: list[int] = field(default_factory=list)
+    sections: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -33,6 +34,12 @@ class RunOptions:
     resume: bool = True
     refresh: bool = False
     cache_dir: Path = Path(".sec_miner_cache")
+    max_workers: int = 1
+    output_mode: str = "markdown_full"
+    chunk_size: int = 1400
+    chunk_overlap: int = 200
+    report_format: str = "none"
+    report_file: str | None = None
 
 
 @dataclass
@@ -60,6 +67,7 @@ class FilingOutput:
     status: str = "success"
     warning: str | None = None
     error: str | None = None
+    report_file: str | None = None
 
     def to_manifest_dict(self) -> dict[str, Any]:
         return {
@@ -76,6 +84,7 @@ class FilingOutput:
             "status": self.status,
             "warning": self.warning,
             "error": self.error,
+            "report_file": self.report_file,
         }
 
 
@@ -85,6 +94,8 @@ class RunSummary:
     finished_at: datetime | None = None
     results: list[FilingOutput] = field(default_factory=list)
     filing_request: FilingRequest | None = None
+    run_options: RunOptions | None = None
+    cancelled: bool = False
 
     @property
     def total(self) -> int:

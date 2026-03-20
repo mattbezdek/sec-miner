@@ -1,11 +1,14 @@
 ## SEC-miner
 
-Lightweight Python package to fetch SEC 10-K filings for multiple companies and export
-LLM-friendly markdown.
+Lightweight Python package to fetch SEC filings for multiple companies and export
+LLM-friendly markdown and chunked JSONL.
 
-- Default extraction: full 10-K
+- Default extraction: full 10-K (configurable forms)
 - Flexible inputs: CIKs, tickers, or ambiguous company names (best-match + warning)
-- Optional JSON manifest and combined markdown output (enabled by default)
+- Optional JSON manifest, run reports, and combined markdown output
+- Section-aware output and JSONL chunking mode for RAG pipelines
+- Incremental resume cache to skip previously downloaded filings
+- Bounded concurrency (`--max-workers`) with shared rate limiting
 - Continue-on-failure batch execution with end-of-run summary
 - Simple GUI (`tkinter`) for non-CLI users
 
@@ -124,6 +127,12 @@ sec-miner --help
 - `--resume` / `--no-resume`: Toggle cache-based skip behavior.
 - `--refresh`: Force re-fetch and bypass cache.
 - `--cache-dir`: Override cache location (default `.sec_miner_cache`).
+- `--max-workers`: Process targets concurrently.
+- `--section`: Repeatable section selector (`business`, `risk_factors`, `mda`, `financials`).
+- `--output-mode`: `markdown_full`, `markdown_sections`, or `jsonl_chunks`.
+- `--chunk-size` / `--chunk-overlap`: Chunk controls for `jsonl_chunks`.
+- `--report-format`: `none`, `markdown`, or `html`.
+- `resolve` subcommand: preview company resolution before running full extraction.
 
 ## GUI
 
@@ -150,6 +159,9 @@ Paste one target per line, choose output options, and click **Run**.
 - **Write combined markdown file**: Produces one merged markdown file across all successful companies.
   When enabled, SEC-miner skips writing per-company markdown files.
 - **Run**: Starts processing in the background.
+- **Cancel**: Stops the run safely.
+- **Save Preset / Load Preset**: Reuse common GUI settings.
+- **Open Output Folder**: Opens your output path in Finder.
 - **Progress / Summary**: Live status messages and final success/failure counts.
 
 ## Config (TOML)
@@ -171,8 +183,10 @@ CLI/GUI inputs > TOML > environment variables.
 
 `init-config` now includes filing selection and cache options:
 
-- `forms`, `latest_n`, `since`, `until`, `years`
-- `resume`, `refresh`, `cache_dir`
+- `forms`, `latest_n`, `since`, `until`, `years`, `sections`
+- `resume`, `refresh`, `cache_dir`, `max_workers`
+- `output_mode`, `chunk_size`, `chunk_overlap`
+- `report_format`, `report_file`
 
 Environment fallback:
 - `SEC_IDENTITY`

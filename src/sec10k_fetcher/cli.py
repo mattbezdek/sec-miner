@@ -6,8 +6,9 @@ import typer
 
 from sec10k_fetcher.config import load_config
 from sec10k_fetcher.pipeline import run_pipeline, write_default_config
+from sec10k_fetcher.resolver import resolve_target
 
-app = typer.Typer(help="SEC-miner: fetch 10-K filings and export markdown.")
+app = typer.Typer(help="SEC-miner: fetch SEC filings and export markdown/chunks.")
 
 
 def _load_targets(target: list[str], targets_file: Path | None) -> list[str]:
@@ -50,11 +51,25 @@ def run(
         "--year",
         help="Only include filings whose filing date is in this year (repeatable).",
     ),
+    section: list[str] = typer.Option(
+        None,
+        "--section",
+        help="Section selector (repeatable): business, risk_factors, mda, financials.",
+    ),
     resume: bool = typer.Option(
         True, "--resume/--no-resume", help="Reuse local cache to skip previously downloaded filings."
     ),
     refresh: bool = typer.Option(False, help="Bypass cache and re-fetch filings."),
     cache_dir: Path = typer.Option(Path(".sec_miner_cache"), help="Cache directory."),
+    max_workers: int = typer.Option(1, help="Number of targets to process concurrently."),
+    output_mode: str = typer.Option(
+        "markdown_full",
+        help="Output mode: markdown_full, markdown_sections, jsonl_chunks.",
+    ),
+    chunk_size: int = typer.Option(1400, help="Chunk size for jsonl_chunks output mode."),
+    chunk_overlap: int = typer.Option(200, help="Chunk overlap for jsonl_chunks output mode."),
+    report_format: str = typer.Option("none", help="Run report format: none, markdown, html."),
+    report_file: str = typer.Option("", help="Optional run report filename."),
     config: Path | None = typer.Option(None, help="Path to config.toml."),
 ) -> None:
     targets = _load_targets(target or [], targets_file)
@@ -72,9 +87,16 @@ def run(
         since=since or None,
         until=until or None,
         years=year or None,
+        sections=section or None,
         resume=resume,
         refresh=refresh,
         cache_dir=str(cache_dir),
+        max_workers=max_workers,
+        output_mode=output_mode,
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+        report_format=report_format,
+        report_file=report_file or None,
     )
     summary = run_pipeline(app_config, logger=typer.echo)
     if summary.failure_count:
@@ -85,3 +107,29 @@ def run(
 def init_config(path: Path = typer.Option(Path("config.toml"), help="Path to create config file.")) -> None:
     write_default_config(path)
     typer.echo(f"Wrote default config file: {path}")
+
+
+@app.command()
+def resolve(
+    target: list[str] = typer.Option(
+        None,
+        "--target",
+        "-t",
+        help="CIK, ticker, or company name. Repeat for multiple targets.",
+    ),
+    targets_file: Path | None = typer.Option(
+        None, help="Optional file with one target (CIK/name/ticker) per line."
+    ),
+) -> None:
+    targets = _load_targets(target or [], targets_file)
+    if not targets:
+        raise typer.BadParameter("Provide at least one --target or --targets-file.")
+    for item in targets:
+        resolved = resolve_target(item)
+        typer.echo(f"Input: {item}")
+        typer.echo(f"  Company: {resolved.company_name}")
+        typer.echo(f"  CIK: {resolved.cik}")
+        typer.echo(f"  Ticker: {resolved.ticker or ''}")
+        typer.echo(f"  Method: {resolved.resolution_method}")
+        for warning in resolved.warnings:
+            typer.echo(f"  Warning: {warning}")

@@ -14,11 +14,11 @@ The plan prioritizes:
 
 ---
 
-## Implementation Status (Updated Mar 20, 2026)
+## Implementation Status (Updated Mar 20, 2026 - End of Phase 6)
 
 ### Completed in this iteration
 
-- **Phase 0 (mostly complete):**
+- **Phase 0 (complete):**
   - Added domain abstractions `FilingRequest` and `RunOptions`.
   - Refactored orchestration to consume request/options objects.
   - Added architecture documentation in `docs/architecture.md`.
@@ -33,12 +33,29 @@ The plan prioritizes:
   - Implemented resume/skip behavior in pipeline with `skipped_cached` status.
   - Added CLI/config support for `--resume`, `--refresh`, and `--cache-dir`.
   - Added cache lifecycle test coverage (first run fetches, second run skips).
+- **Phase 3 (complete):**
+  - Added bounded parallel processing with `ThreadPoolExecutor`.
+  - Added shared thread-safe rate limiting and cache synchronization.
+  - Added `--max-workers` runtime option (CLI/config/GUI support).
+- **Phase 4 (complete):**
+  - Added section extraction and normalized section aliases.
+  - Added `markdown_sections` and `jsonl_chunks` output modes.
+  - Added chunking with stable chunk IDs and configurable size/overlap.
+  - Added section/chunk metadata fields in outputs and manifest.
+- **Phase 5 (complete):**
+  - Added GUI progress bar, cancel, save/load presets, and open output folder action.
+  - Added CLI `resolve` command to preview target resolution before run.
+  - Added optional run reporting (`markdown`/`html`).
+- **Phase 6 (complete):**
+  - Added error classification utility for improved failure status semantics.
+  - Added CI workflow for `ruff`, `mypy`, and coverage-gated `pytest`.
+  - Added integration-style and feature tests for CLI resolve, processing, and new modes.
 
-### Deferred to later phases
+### Remaining follow-ups
 
-- Parallel processing (`--max-workers`) from Phase 3.
-- Section-aware/chunk output modes from Phase 4.
-- GUI progress/cancel/preset upgrades from Phase 5.
+- Tune/benchmark concurrency defaults against real SEC endpoint behavior.
+- Expand section extraction heuristics for non-standard heading formats.
+- Add broader GUI automated testing (currently mostly manual + targeted unit tests).
 
 ---
 

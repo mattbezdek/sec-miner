@@ -64,3 +64,33 @@ def test_refresh_disables_resume() -> None:
     )
     assert loaded.run_options.refresh is True
     assert loaded.run_options.resume is False
+
+
+def test_load_config_runtime_options() -> None:
+    loaded = load_config(
+        identity="Jane Doe jane@example.com",
+        targets=["AAPL"],
+        max_workers=4,
+        output_mode="jsonl_chunks",
+        chunk_size=1000,
+        chunk_overlap=100,
+        report_format="markdown",
+        report_file="report.md",
+        sections=["risk_factors", "mda"],
+    )
+    assert loaded.run_options.max_workers == 4
+    assert loaded.run_options.output_mode == "jsonl_chunks"
+    assert loaded.run_options.chunk_size == 1000
+    assert loaded.run_options.chunk_overlap == 100
+    assert loaded.run_options.report_format == "markdown"
+    assert loaded.run_options.report_file == "report.md"
+    assert loaded.filing_request.sections == ["risk_factors", "mda"]
+
+
+def test_load_config_rejects_invalid_output_mode() -> None:
+    with pytest.raises(ValueError):
+        load_config(
+            identity="Jane Doe jane@example.com",
+            targets=["AAPL"],
+            output_mode="bad_mode",
+        )

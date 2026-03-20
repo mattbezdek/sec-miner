@@ -1,4 +1,4 @@
-# SEC-miner Architecture (Phase 0-2)
+# SEC-miner Architecture (Phase 0-6)
 
 ## Pipeline Boundaries
 
