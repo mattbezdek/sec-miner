@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.0.36">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>implementation_roadmap</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+<script src="IMPLEMENTATION_ROADMAP_files/libs/clipboard/clipboard.min.js"></script>
+<script src="IMPLEMENTATION_ROADMAP_files/libs/quarto-html/quarto.js"></script>
+<script src="IMPLEMENTATION_ROADMAP_files/libs/quarto-html/popper.min.js"></script>
+<script src="IMPLEMENTATION_ROADMAP_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="IMPLEMENTATION_ROADMAP_files/libs/quarto-html/anchor.min.js"></script>
+<link href="IMPLEMENTATION_ROADMAP_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="IMPLEMENTATION_ROADMAP_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="IMPLEMENTATION_ROADMAP_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="IMPLEMENTATION_ROADMAP_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="IMPLEMENTATION_ROADMAP_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+
+
+<section id="sec-miner-implementation-roadmap" class="level1">
+<h1>SEC-miner Implementation Roadmap</h1>
+<section id="purpose" class="level2">
+<h2 class="anchored" data-anchor-id="purpose">Purpose</h2>
+<p>This roadmap translates the current product direction into an execution plan with clear phases, deliverables, dependencies, acceptance criteria, and testing strategy.</p>
+<p>The plan prioritizes:</p>
+<ol type="1">
+<li>Expanding filing coverage beyond only latest 10-K.</li>
+<li>Improving repeat-run efficiency (incremental/resume behavior).</li>
+<li>Increasing throughput safely (bounded concurrency + rate awareness).</li>
+<li>Producing analyst- and LLM-friendly outputs.</li>
+<li>Improving reliability, observability, and user experience.</li>
+</ol>
+<hr>
+</section>
+<section id="current-baseline" class="level2">
+<h2 class="anchored" data-anchor-id="current-baseline">Current Baseline</h2>
+<p>SEC-miner currently provides:</p>
+<ul>
+<li>Target resolution (CIK/ticker/name with best-match warning behavior).</li>
+<li>Fetch latest 10-K per target.</li>
+<li>HTML to markdown conversion.</li>
+<li>Per-company or combined markdown output.</li>
+<li>Optional JSON manifest.</li>
+<li>CLI + tkinter GUI.</li>
+</ul>
+<p>Key constraints in current architecture:</p>
+<ul>
+<li>Filing type is fixed (<code>10-K</code>).</li>
+<li>Selection is fixed (<code>latest()</code> only).</li>
+<li>Pipeline is sequential.</li>
+<li>No persisted cache/state for incremental runs.</li>
+<li>Limited test surface around resolver/fetch/pipeline behavior.</li>
+</ul>
+<hr>
+</section>
+<section id="guiding-principles" class="level2">
+<h2 class="anchored" data-anchor-id="guiding-principles">Guiding Principles</h2>
+<ul>
+<li>Preserve simplicity for new users (safe defaults, optional advanced flags).</li>
+<li>Keep SEC-friendly behavior (explicit identity, controlled request rates).</li>
+<li>Maintain deterministic outputs for reproducibility.</li>
+<li>Add features in vertical slices (CLI + core + tests + docs in each phase).</li>
+<li>Avoid breaking current workflows; introduce backward-compatible defaults.</li>
+</ul>
+<hr>
+</section>
+<section id="phase-0-foundation-and-design-alignment-3-4-days" class="level2">
+<h2 class="anchored" data-anchor-id="phase-0-foundation-and-design-alignment-3-4-days">Phase 0: Foundation and Design Alignment (3-4 days)</h2>
+<section id="goals" class="level3">
+<h3 class="anchored" data-anchor-id="goals">Goals</h3>
+<ul>
+<li>Lock scope, interfaces, and success metrics before larger feature work.</li>
+<li>Reduce rework by introducing a few internal abstractions early.</li>
+</ul>
+</section>
+<section id="deliverables" class="level3">
+<h3 class="anchored" data-anchor-id="deliverables">Deliverables</h3>
+<ul>
+<li>Architectural note (<code>docs/architecture.md</code>) for fetch/write pipeline boundaries.</li>
+<li>Configuration schema update plan for new options.</li>
+<li>Error taxonomy draft (recoverable vs non-recoverable failures).</li>
+<li>Expanded tests for existing baseline behavior before refactors.</li>
+</ul>
+</section>
+<section id="implementation-tasks" class="level3">
+<h3 class="anchored" data-anchor-id="implementation-tasks">Implementation Tasks</h3>
+<ul>
+<li>Introduce internal domain concepts:
+<ul>
+<li><code>FilingRequest</code> (form, date filters, selection settings).</li>
+<li><code>RunOptions</code> (resume/cache/concurrency/report toggles).</li>
+</ul></li>
+<li>Refactor pipeline signatures to accept richer request/options objects.</li>
+<li>Add fixture-based tests that pin current output formatting and manifest shape.</li>
+</ul>
+</section>
+<section id="acceptance-criteria" class="level3">
+<h3 class="anchored" data-anchor-id="acceptance-criteria">Acceptance Criteria</h3>
+<ul>
+<li>Existing CLI invocations still produce identical outputs.</li>
+<li>Test suite includes baseline regression checks for:
+<ul>
+<li>config loading precedence,</li>
+<li>writer file naming/collision behavior,</li>
+<li>pipeline summary counts.</li>
+</ul></li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="phase-1-multi-form-filing-selection-controls-1-1.5-weeks" class="level2">
+<h2 class="anchored" data-anchor-id="phase-1-multi-form-filing-selection-controls-1-1.5-weeks">Phase 1: Multi-Form + Filing Selection Controls (1-1.5 weeks)</h2>
+<section id="goals-1" class="level3">
+<h3 class="anchored" data-anchor-id="goals-1">Goals</h3>
+<ul>
+<li>Support broader SEC use cases and basic historical retrieval.</li>
+</ul>
+</section>
+<section id="scope" class="level3">
+<h3 class="anchored" data-anchor-id="scope">Scope</h3>
+<ul>
+<li>CLI options:
+<ul>
+<li><code>--form</code> (repeatable single values) and/or <code>--forms</code> (comma-delimited).</li>
+<li><code>--latest-n</code>.</li>
+<li><code>--since</code> / <code>--until</code> (ISO date).</li>
+<li><code>--year</code> (single or repeatable).</li>
+</ul></li>
+<li>Config file parity for all options.</li>
+<li>Manifest updates to include selected <code>form</code> and selection metadata.</li>
+</ul>
+</section>
+<section id="implementation-tasks-1" class="level3">
+<h3 class="anchored" data-anchor-id="implementation-tasks-1">Implementation Tasks</h3>
+<ul>
+<li>Update <code>AppConfig</code> to include form and filing selection options.</li>
+<li>Extend fetcher methods to retrieve and filter filings, not only <code>.latest()</code>.</li>
+<li>Introduce deterministic selection ordering:
+<ul>
+<li>newest first by filing date,</li>
+<li>stable tie-breakers by accession.</li>
+</ul></li>
+<li>Output naming strategy updated for form type and multi-filing runs.</li>
+<li>Add validation rules:
+<ul>
+<li>disallow contradictory combinations (<code>--year</code> with out-of-range explicit dates unless explicitly documented),</li>
+<li><code>latest_n &gt;= 1</code>,</li>
+<li>recognized form strings.</li>
+</ul></li>
+</ul>
+</section>
+<section id="testing" class="level3">
+<h3 class="anchored" data-anchor-id="testing">Testing</h3>
+<ul>
+<li>Unit tests for config parsing/validation combinations.</li>
+<li>Fetcher tests with mocked filings list:
+<ul>
+<li>correct filter behavior by date/year/form,</li>
+<li>correct top-N selection.</li>
+</ul></li>
+<li>Writer tests for multi-filing naming and deterministic ordering.</li>
+<li>CLI smoke tests for representative invocations.</li>
+</ul>
+</section>
+<section id="acceptance-criteria-1" class="level3">
+<h3 class="anchored" data-anchor-id="acceptance-criteria-1">Acceptance Criteria</h3>
+<ul>
+<li>User can fetch, for each target:
+<ul>
+<li>latest 1+ filing(s),</li>
+<li>different SEC form(s),</li>
+<li>date-bounded filing set.</li>
+</ul></li>
+<li>Manifest clearly indicates what was requested and what was returned.</li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="phase-2-incrementalresume-runs-with-local-cache-1-week" class="level2">
+<h2 class="anchored" data-anchor-id="phase-2-incrementalresume-runs-with-local-cache-1-week">Phase 2: Incremental/Resume Runs with Local Cache (1 week)</h2>
+<section id="goals-2" class="level3">
+<h3 class="anchored" data-anchor-id="goals-2">Goals</h3>
+<ul>
+<li>Prevent duplicate work across repeated runs.</li>
+<li>Make scheduled batch execution practical.</li>
+</ul>
+</section>
+<section id="scope-1" class="level3">
+<h3 class="anchored" data-anchor-id="scope-1">Scope</h3>
+<ul>
+<li>New options:
+<ul>
+<li><code>--resume</code> (default <code>true</code> or explicit flag; decision in design review),</li>
+<li><code>--refresh</code> to bypass cache.</li>
+<li>optional <code>--cache-dir</code>.</li>
+</ul></li>
+<li>Persist previously successful <code>(target, cik, form, accession)</code> metadata.</li>
+<li>Skip already-downloaded filings unless refresh requested.</li>
+</ul>
+</section>
+<section id="implementation-tasks-2" class="level3">
+<h3 class="anchored" data-anchor-id="implementation-tasks-2">Implementation Tasks</h3>
+<ul>
+<li>Add lightweight cache store (JSON index initially; later pluggable backend).</li>
+<li>Define cache key schema and versioned cache file format.</li>
+<li>Integrate skip logic in pipeline before conversion/write.</li>
+<li>Log explicit skip reason in run output and manifest.</li>
+</ul>
+</section>
+<section id="testing-1" class="level3">
+<h3 class="anchored" data-anchor-id="testing-1">Testing</h3>
+<ul>
+<li>Cache lifecycle tests:
+<ul>
+<li>initial miss -&gt; fetch + cache write,</li>
+<li>second run -&gt; skip,</li>
+<li>refresh -&gt; refetch.</li>
+</ul></li>
+<li>Corrupt cache handling test (graceful fallback + warning).</li>
+</ul>
+</section>
+<section id="acceptance-criteria-2" class="level3">
+<h3 class="anchored" data-anchor-id="acceptance-criteria-2">Acceptance Criteria</h3>
+<ul>
+<li>Re-running same targets/forms avoids redundant fetch/convert/write.</li>
+<li>Manifest differentiates <code>success</code>, <code>failed</code>, and <code>skipped_cached</code>.</li>
+<li>Cache corruption never crashes entire run.</li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="phase-3-parallel-processing-with-safe-throttling-1-week" class="level2">
+<h2 class="anchored" data-anchor-id="phase-3-parallel-processing-with-safe-throttling-1-week">Phase 3: Parallel Processing with Safe Throttling (1 week)</h2>
+<section id="goals-3" class="level3">
+<h3 class="anchored" data-anchor-id="goals-3">Goals</h3>
+<ul>
+<li>Improve throughput for large target lists while respecting endpoint limits.</li>
+</ul>
+</section>
+<section id="scope-2" class="level3">
+<h3 class="anchored" data-anchor-id="scope-2">Scope</h3>
+<ul>
+<li>New option: <code>--max-workers</code> (default conservative, e.g., 3-5).</li>
+<li>Shared rate-limit strategy across workers.</li>
+<li>Thread-safe logging and summary aggregation.</li>
+</ul>
+</section>
+<section id="implementation-tasks-3" class="level3">
+<h3 class="anchored" data-anchor-id="implementation-tasks-3">Implementation Tasks</h3>
+<ul>
+<li>Convert sequential loop into bounded worker pool execution.</li>
+<li>Implement shared limiter policy:
+<ul>
+<li>global request pacing,</li>
+<li>jitter preserved,</li>
+<li>per-worker backoff on transient failures.</li>
+</ul></li>
+<li>Ensure output writing remains collision-safe and deterministic.</li>
+</ul>
+</section>
+<section id="testing-2" class="level3">
+<h3 class="anchored" data-anchor-id="testing-2">Testing</h3>
+<ul>
+<li>Concurrency tests (mocked fetch latency/failures):
+<ul>
+<li>no deadlocks,</li>
+<li>expected completion counts,</li>
+<li>proper retry behavior.</li>
+</ul></li>
+<li>Deterministic summary tests regardless of execution interleaving.</li>
+</ul>
+</section>
+<section id="acceptance-criteria-3" class="level3">
+<h3 class="anchored" data-anchor-id="acceptance-criteria-3">Acceptance Criteria</h3>
+<ul>
+<li>Batch runtime improves materially on 20+ targets.</li>
+<li>No increase in failure rate under normal conditions.</li>
+<li>Logs remain readable and summary remains accurate.</li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="phase-4-section-aware-and-rag-friendly-output-modes-1-1.5-weeks" class="level2">
+<h2 class="anchored" data-anchor-id="phase-4-section-aware-and-rag-friendly-output-modes-1-1.5-weeks">Phase 4: Section-Aware and RAG-Friendly Output Modes (1-1.5 weeks)</h2>
+<section id="goals-4" class="level3">
+<h3 class="anchored" data-anchor-id="goals-4">Goals</h3>
+<ul>
+<li>Reduce token cost and make outputs immediately ingestible for retrieval workflows.</li>
+</ul>
+</section>
+<section id="scope-3" class="level3">
+<h3 class="anchored" data-anchor-id="scope-3">Scope</h3>
+<ul>
+<li>New option: <code>--sections</code> (common aliases: <code>business</code>, <code>risk_factors</code>, <code>mda</code>, <code>financials</code>).</li>
+<li>New output modes:
+<ul>
+<li><code>markdown_full</code> (existing),</li>
+<li><code>markdown_sections</code>,</li>
+<li><code>jsonl_chunks</code>.</li>
+</ul></li>
+<li>Chunk metadata fields:
+<ul>
+<li>company, cik, ticker, form, accession, filing_date, section, chunk_id.</li>
+</ul></li>
+</ul>
+</section>
+<section id="implementation-tasks-4" class="level3">
+<h3 class="anchored" data-anchor-id="implementation-tasks-4">Implementation Tasks</h3>
+<ul>
+<li>Add section mapping/normalization layer.</li>
+<li>Build chunker with stable chunk IDs and configurable chunk size/overlap.</li>
+<li>Extend writer to emit JSONL and optional sidecar metadata.</li>
+</ul>
+</section>
+<section id="testing-3" class="level3">
+<h3 class="anchored" data-anchor-id="testing-3">Testing</h3>
+<ul>
+<li>Section extraction tests on representative filing fixtures.</li>
+<li>Chunk stability tests (same input -&gt; same chunk IDs).</li>
+<li>Output contract tests for JSONL schema.</li>
+</ul>
+</section>
+<section id="acceptance-criteria-4" class="level3">
+<h3 class="anchored" data-anchor-id="acceptance-criteria-4">Acceptance Criteria</h3>
+<ul>
+<li>User can request only specific sections when available.</li>
+<li>JSONL output is directly consumable by vector ingestion pipelines.</li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="phase-5-ux-and-reporting-improvements-4-6-days" class="level2">
+<h2 class="anchored" data-anchor-id="phase-5-ux-and-reporting-improvements-4-6-days">Phase 5: UX and Reporting Improvements (4-6 days)</h2>
+<section id="goals-5" class="level3">
+<h3 class="anchored" data-anchor-id="goals-5">Goals</h3>
+<ul>
+<li>Improve non-CLI user productivity and run observability.</li>
+</ul>
+</section>
+<section id="scope-4" class="level3">
+<h3 class="anchored" data-anchor-id="scope-4">Scope</h3>
+<ul>
+<li>GUI:
+<ul>
+<li>progress bar + processed/total counters,</li>
+<li>cancel support,</li>
+<li>save/load run presets,</li>
+<li>open output directory button.</li>
+</ul></li>
+<li>CLI:
+<ul>
+<li><code>resolve</code> subcommand to preview target mapping before full run.</li>
+</ul></li>
+<li>Optional run report:
+<ul>
+<li>markdown or HTML summary for business users.</li>
+</ul></li>
+</ul>
+</section>
+<section id="implementation-tasks-5" class="level3">
+<h3 class="anchored" data-anchor-id="implementation-tasks-5">Implementation Tasks</h3>
+<ul>
+<li>Add cancellable execution token checked by pipeline.</li>
+<li>Add GUI state management for run lifecycle (idle/running/cancelled/complete).</li>
+<li>Implement <code>sec-miner resolve</code> with ambiguity details and selected candidate.</li>
+</ul>
+</section>
+<section id="testing-4" class="level3">
+<h3 class="anchored" data-anchor-id="testing-4">Testing</h3>
+<ul>
+<li>CLI tests for resolve command behavior.</li>
+<li>GUI manual test checklist plus minimal unit coverage around config/preset serialization.</li>
+</ul>
+</section>
+<section id="acceptance-criteria-5" class="level3">
+<h3 class="anchored" data-anchor-id="acceptance-criteria-5">Acceptance Criteria</h3>
+<ul>
+<li>GUI user can cancel long runs safely.</li>
+<li>Analysts can review run outcomes without opening raw manifest JSON.</li>
+<li>Users can verify name resolution before running full extraction.</li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="phase-6-reliability-and-developer-quality-ongoing-start-after-phase-1" class="level2">
+<h2 class="anchored" data-anchor-id="phase-6-reliability-and-developer-quality-ongoing-start-after-phase-1">Phase 6: Reliability and Developer Quality (ongoing, start after Phase 1)</h2>
+<section id="goals-6" class="level3">
+<h3 class="anchored" data-anchor-id="goals-6">Goals</h3>
+<ul>
+<li>Sustain velocity while reducing regression risk.</li>
+</ul>
+</section>
+<section id="scope-5" class="level3">
+<h3 class="anchored" data-anchor-id="scope-5">Scope</h3>
+<ul>
+<li>Test suite expansion and CI quality gates.</li>
+<li>Better exception classification and user-facing error messages.</li>
+<li>Optional telemetry/logging mode (local structured logs, no remote requirement).</li>
+</ul>
+</section>
+<section id="implementation-tasks-6" class="level3">
+<h3 class="anchored" data-anchor-id="implementation-tasks-6">Implementation Tasks</h3>
+<ul>
+<li>Add integration tests with mocked <code>edgar</code> and <code>sec2md</code> boundaries.</li>
+<li>Add coverage threshold target (e.g., 80% on core modules).</li>
+<li>Add lint/type checks in CI (<code>ruff</code>, <code>mypy</code>, <code>pytest</code>).</li>
+</ul>
+</section>
+<section id="acceptance-criteria-6" class="level3">
+<h3 class="anchored" data-anchor-id="acceptance-criteria-6">Acceptance Criteria</h3>
+<ul>
+<li>CI blocks merges on lint/type/test failures.</li>
+<li>Critical code paths (resolver/fetch/pipeline/writer/config) are thoroughly covered.</li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="suggested-milestone-plan-8-10-weeks-total" class="level2">
+<h2 class="anchored" data-anchor-id="suggested-milestone-plan-8-10-weeks-total">Suggested Milestone Plan (8-10 weeks total)</h2>
+<ul>
+<li><strong>Milestone A (Week 1):</strong> Phase 0 complete, baseline tests expanded.</li>
+<li><strong>Milestone B (Weeks 2-3):</strong> Phase 1 complete (forms + selection).</li>
+<li><strong>Milestone C (Week 4):</strong> Phase 2 complete (incremental/resume cache).</li>
+<li><strong>Milestone D (Week 5):</strong> Phase 3 complete (concurrency).</li>
+<li><strong>Milestone E (Weeks 6-7):</strong> Phase 4 complete (section/chunk outputs).</li>
+<li><strong>Milestone F (Week 8):</strong> Phase 5 complete (UX/reporting).</li>
+<li><strong>Hardening Buffer (Weeks 9-10):</strong> Phase 6 depth work + bugfixes + docs polish.</li>
+</ul>
+<hr>
+</section>
+<section id="technical-dependencies-and-risks" class="level2">
+<h2 class="anchored" data-anchor-id="technical-dependencies-and-risks">Technical Dependencies and Risks</h2>
+<section id="dependencies" class="level3">
+<h3 class="anchored" data-anchor-id="dependencies">Dependencies</h3>
+<ul>
+<li><code>edgartools</code> behavior for filing discovery/filtering across forms.</li>
+<li><code>sec2md</code> conversion quality/stability across varied filing HTML.</li>
+<li>Cross-platform GUI behavior (<code>tkinter</code>) for cancellation and responsiveness.</li>
+</ul>
+</section>
+<section id="major-risks" class="level3">
+<h3 class="anchored" data-anchor-id="major-risks">Major Risks</h3>
+<ul>
+<li>API/HTML variability causing section extraction inconsistency.</li>
+<li>Concurrency introducing nondeterminism or race conditions in writes/logging.</li>
+<li>Cache invalidation complexity when options change between runs.</li>
+</ul>
+</section>
+<section id="mitigations" class="level3">
+<h3 class="anchored" data-anchor-id="mitigations">Mitigations</h3>
+<ul>
+<li>Introduce contract tests with representative fixture corpus.</li>
+<li>Keep deterministic ordering and stable naming as explicit requirements.</li>
+<li>Version cache schema and include option fingerprint in cache key.</li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="definition-of-done-per-feature" class="level2">
+<h2 class="anchored" data-anchor-id="definition-of-done-per-feature">Definition of Done (per feature)</h2>
+<p>A feature is considered complete only when:</p>
+<ul>
+<li>CLI and config support are both implemented.</li>
+<li>GUI parity is provided where applicable.</li>
+<li>Unit/integration tests cover success + failure paths.</li>
+<li>Manifest/report outputs include new fields as needed.</li>
+<li>README includes usage examples and migration notes.</li>
+</ul>
+<hr>
+</section>
+<section id="immediate-next-sprint-proposal" class="level2">
+<h2 class="anchored" data-anchor-id="immediate-next-sprint-proposal">Immediate Next Sprint Proposal</h2>
+<p>If you want to start now with maximal value/effort ratio:</p>
+<ol type="1">
+<li>Execute <strong>Phase 0</strong> quickly (focus on internal abstractions and tests).</li>
+<li>Implement <strong>Phase 1</strong> first with <code>--form</code>, <code>--latest-n</code>, and <code>--since</code>.</li>
+<li>Follow immediately with <strong>Phase 2</strong> cache/resume to make recurring usage efficient.</li>
+</ol>
+<p>This sequence unlocks the biggest functional gain with manageable implementation risk.</p>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    target: function(trigger) {
+      return trigger.previousElementSibling;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    setTimeout(function() {
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      let href = ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const cites = ref.parentNode.getAttribute('data-cites').split(' ');
+    tippyHover(ref, function() {
+      var popup = window.document.createElement('div');
+      cites.forEach(function(cite) {
+        var citeDiv = window.document.createElement('div');
+        citeDiv.classList.add('hanging-indent');
+        citeDiv.classList.add('csl-entry');
+        var biblioDiv = window.document.getElementById('ref-' + cite);
+        if (biblioDiv) {
+          citeDiv.innerHTML = biblioDiv.innerHTML;
+        }
+        popup.appendChild(citeDiv);
+      });
+      return popup.innerHTML;
+    });
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>

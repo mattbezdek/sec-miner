@@ -12,6 +12,7 @@ def test_write_markdown_output_creates_file(tmp_path: Path) -> None:
         resolved_cik="0000320193",
         company_name="Apple Inc.",
         ticker="AAPL",
+        form="10-K",
         accession_no="0000320193-25-000079",
         filing_date="2025-10-31",
         source_url="https://example.com",

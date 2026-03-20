@@ -109,9 +109,21 @@ sec-miner --help
   --identity "Your Name your.email@example.com" \
   --target 0000320193 \
   --target amazon \
+  --form 10-K \
+  --latest-n 1 \
   --output-dir output \
   --include-manifest
 ```
+
+### Advanced CLI Options
+
+- `--form`: Repeatable form selector (for example, `--form 10-K --form 10-Q`).
+- `--latest-n`: Number of most recent filings per target and form.
+- `--since` / `--until`: ISO date filters (`YYYY-MM-DD`).
+- `--year`: Repeatable year filter.
+- `--resume` / `--no-resume`: Toggle cache-based skip behavior.
+- `--refresh`: Force re-fetch and bypass cache.
+- `--cache-dir`: Override cache location (default `.sec_miner_cache`).
 
 ## GUI
 
@@ -156,6 +168,11 @@ Then run with:
 
 Precedence is:
 CLI/GUI inputs > TOML > environment variables.
+
+`init-config` now includes filing selection and cache options:
+
+- `forms`, `latest_n`, `since`, `until`, `years`
+- `resume`, `refresh`, `cache_dir`
 
 Environment fallback:
 - `SEC_IDENTITY`

@@ -18,7 +18,8 @@ def _filename_base(filing: FetchedFiling) -> str:
     label = filing.ticker or filing.company_name or filing.resolved_cik
     date = filing.filing_date or datetime.utcnow().strftime("%Y-%m-%d")
     accession = _safe_slug(filing.accession_no or "latest")
-    return f"{_safe_slug(label)}_{date}_{accession}_10k"
+    form = _safe_slug(filing.form or "filing")
+    return f"{_safe_slug(label)}_{date}_{accession}_{form}"
 
 
 def _next_available_path(path: Path) -> Path:
@@ -52,6 +53,7 @@ def render_company_markdown(filing: FetchedFiling, full_markdown: str) -> str:
     return (
         f"# {filing.company_name} 10-K\n\n"
         f"- CIK: {filing.resolved_cik}\n"
+        f"- Form: {filing.form}\n"
         f"- Filing date: {filing.filing_date}\n"
         f"- Accession: {filing.accession_no}\n"
         f"- Source: {filing.source_url}\n\n"
@@ -91,6 +93,14 @@ def write_manifest(output_dir: Path, summary: RunSummary) -> Path:
         "total": summary.total,
         "success_count": summary.success_count,
         "failure_count": summary.failure_count,
+        "skipped_count": summary.skipped_count,
+        "filing_request": {
+            "forms": summary.filing_request.forms if summary.filing_request else [],
+            "latest_n": summary.filing_request.latest_n if summary.filing_request else 1,
+            "since": summary.filing_request.since if summary.filing_request else None,
+            "until": summary.filing_request.until if summary.filing_request else None,
+            "years": summary.filing_request.years if summary.filing_request else [],
+        },
         "results": [result.to_manifest_dict() for result in summary.results],
     }
     manifest_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")

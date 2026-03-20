@@ -37,6 +37,24 @@ def run(
     rate_limit_rps: float = typer.Option(
         2.0, help="Practical request rate limit (requests per second)."
     ),
+    form: list[str] = typer.Option(
+        None,
+        "--form",
+        help="SEC form to fetch (repeatable). Defaults to 10-K.",
+    ),
+    latest_n: int = typer.Option(1, help="Number of most-recent filings per target/form."),
+    since: str = typer.Option("", help="Only include filings on/after this ISO date (YYYY-MM-DD)."),
+    until: str = typer.Option("", help="Only include filings on/before this ISO date (YYYY-MM-DD)."),
+    year: list[int] = typer.Option(
+        None,
+        "--year",
+        help="Only include filings whose filing date is in this year (repeatable).",
+    ),
+    resume: bool = typer.Option(
+        True, "--resume/--no-resume", help="Reuse local cache to skip previously downloaded filings."
+    ),
+    refresh: bool = typer.Option(False, help="Bypass cache and re-fetch filings."),
+    cache_dir: Path = typer.Option(Path(".sec_miner_cache"), help="Cache directory."),
     config: Path | None = typer.Option(None, help="Path to config.toml."),
 ) -> None:
     targets = _load_targets(target or [], targets_file)
@@ -49,6 +67,14 @@ def run(
         combined_file=combined_file,
         include_manifest=include_manifest,
         rate_limit_rps=rate_limit_rps,
+        forms=form or None,
+        latest_n=latest_n,
+        since=since or None,
+        until=until or None,
+        years=year or None,
+        resume=resume,
+        refresh=refresh,
+        cache_dir=str(cache_dir),
     )
     summary = run_pipeline(app_config, logger=typer.echo)
     if summary.failure_count:
